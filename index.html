@@ -142,8 +142,8 @@
                 };
 
                 // Кнопки для notificationOccurred
-                ['success', 'error'].forEach(type => {
-                    createButton(`Notification: ${type}`, () => {
+                ['успех', 'ошибка'].forEach(type => {
+                    createButton(`Вибрация: ${type}`, () => {
                         tg.HapticFeedback.notificationOccurred(type);
                     });
                 });
@@ -203,6 +203,8 @@
                         });
 
                         video.srcObject = stream;
+                        // Принудительно запускаем воспроизведение. Атрибут autoplay не всегда надежен.
+                        video.play();
                         cameraView.style.display = 'flex';
                     } catch (err) {
                         console.error("Ошибка доступа к камере: ", err);

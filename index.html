@@ -61,15 +61,62 @@
             border-radius: 12px;
             line-height: 1.4;
         }
+
+        /* --- Стили для камеры --- */
+        #camera-view {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 100;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #camera-preview {
+            width: 100%;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        #capture-btn {
+            position: absolute;
+            bottom: 40px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 5px solid white;
+            background-color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+        }
+
+        #photo-result {
+            max-width: 100%;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none; /* Скрыто по умолчанию */
+        }
     </style>
 </head>
 <body>
-    <h1>Привет! Нажми на кнопку.</h1>
+    <h1>Инструменты</h1>
     <div id="button-container" style="display: flex; flex-direction: column; gap: 10px; padding: 10px;">
         <!-- Кнопки будут созданы здесь с помощью JS -->
     </div>
     <div id="info-container">
         <!-- Информационный блок будет создан здесь -->
+    </div>
+    <!-- Контейнер для отображения сделанного снимка -->
+    <img id="photo-result" alt="Сделанный снимок" />
+
+    <!-- Полноэкранный интерфейс для камеры -->
+    <div id="camera-view">
+        <video id="camera-preview" autoplay playsinline></video>
+        <button id="capture-btn"></button>
     </div>
 
     <script>
@@ -78,6 +125,12 @@
             const tg = window.Telegram.WebApp;
             const container = document.getElementById('button-container');
             const infoContainer = document.getElementById('info-container');
+            const cameraView = document.getElementById('camera-view');
+            const video = document.getElementById('camera-preview');
+            const captureBtn = document.getElementById('capture-btn');
+            const photoResult = document.getElementById('photo-result');
+
+            let stream = null;
 
             // Проверяем, что мы находимся внутри Telegram Mini App
             if (tg && tg.HapticFeedback) {
@@ -88,23 +141,11 @@
                     container.appendChild(btn);
                 };
 
-                // Кнопки для impactOccurred
-                ['light', 'medium', 'heavy', 'rigid', 'soft'].forEach(type => {
-                    createButton(`Impact: ${type}`, () => {
-                        tg.HapticFeedback.impactOccurred(type);
-                    });
-                });
-
                 // Кнопки для notificationOccurred
-                ['success', 'warning', 'error'].forEach(type => {
+                ['success', 'error'].forEach(type => {
                     createButton(`Notification: ${type}`, () => {
                         tg.HapticFeedback.notificationOccurred(type);
                     });
-                });
-
-                // Кнопка для selectionChanged
-                createButton('Selection Changed', () => {
-                    tg.HapticFeedback.selectionChanged();
                 });
 
                 // --- ДОБАВЛЕННЫЙ КОД НАЧИНАЕТСЯ ЗДЕСЬ ---
@@ -147,7 +188,47 @@
                     }
                 });
 
-                // --- ДОБАВЛЕННЫЙ КОД ЗАКАНЧИВАЕТСЯ ЗДЕСЬ ---
+                // Кнопка для снимка с камеры
+                createButton('📸 Сделать снимок', async () => {
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        tg.showAlert('Камера не поддерживается на вашем устройстве.');
+                        return;
+                    }
+
+                    try {
+                        // Запрашиваем доступ к фронтальной камере
+                        stream = await navigator.mediaDevices.getUserMedia({
+                            video: { facingMode: 'user' },
+                            audio: false
+                        });
+
+                        video.srcObject = stream;
+                        cameraView.style.display = 'flex';
+                    } catch (err) {
+                        console.error("Ошибка доступа к камере: ", err);
+                        tg.showAlert('Не удалось получить доступ к камере. Проверьте разрешения для Telegram в настройках телефона.');
+                    }
+                });
+
+                // Обработчик для кнопки "Сделать снимок"
+                captureBtn.addEventListener('click', () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const context = canvas.getContext('2d');
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // Показываем результат
+                    photoResult.src = canvas.toDataURL('image/jpeg');
+                    photoResult.style.display = 'block';
+
+                    // Останавливаем камеру и скрываем интерфейс
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    cameraView.style.display = 'none';
+                    tg.HapticFeedback.notificationOccurred('success');
+                });
 
             } else {
                 // Если приложение открыто не в Telegram, сообщим об этом
@@ -155,10 +236,6 @@
             }
 
             // Добавляем информационный блок с инструкциями
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'info-block';
-            infoDiv.innerHTML = '<b>Не все кнопки вибрируют?</b><br>Это нормально для Android. Чтобы включить все типы вибрации, попробуйте:<br>1. Отключить режим энергосбережения.<br>2. Включить "Тактильный отклик" или "Виброотклик" в системных настройках звука.';
-            infoContainer.appendChild(infoDiv);
         });
     </script>
 </body>

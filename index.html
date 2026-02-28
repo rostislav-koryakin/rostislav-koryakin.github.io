@@ -388,16 +388,16 @@
                                 'Authorization': `Bearer ${apiKey}`
                             },
                             body: JSON.stringify({
-                                model: "deepseek-vl-chat",
+                                model: "deepseek-chat",
                                 messages: [
                                     {
                                         role: "user",
-                                        content: "Опиши эмоции человека на фото. Будь краток.\n<image_placeholder>"
+                                        content: [
+                                            { "type": "text", "text": "Опиши эмоции человека на фото. Будь краток." },
+                                            { "type": "image_url", "image_url": { "url": photoResult.src } }
+                                        ]
                                     }
-                                ],
-                                extra_body: {
-                                    image: photoResult.src
-                                }
+                                ]
                             })
                         });
 

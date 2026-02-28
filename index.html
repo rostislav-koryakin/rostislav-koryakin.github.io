@@ -248,40 +248,41 @@
                     tg.MainButton.disable();
 
                     try {
-                        // ВАЖНО: Замените 'YOUR_API_KEY' на ваш ключ от DeepAI.org
-                        const apiKey = 'ef659e94-a59f-421f-9640-73797353c367';
+                        // ВАЖНО: Замените 'YOUR_API_KEY' на ваш ключ от platform.deepseek.com
+                        const apiKey = 'sk-230edd0b5a5a416ea2e5b0962a1f3821';
                         if (apiKey === 'YOUR_API_KEY') {
                             throw new Error('API_KEY_MISSING');
                         }
 
-                        const response = await fetch('https://api.deepai.org/api/demographics-recognition', {
+                        const response = await fetch('https://api.deepseek.com/chat/completions', {
                             method: 'POST',
                             headers: {
-                                'api-key': apiKey
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${apiKey}`
                             },
-                            body: (await (async () => {
-                                const formData = new FormData();
-                                const blob = await (await fetch(photoResult.src)).blob();
-                                formData.append('image', blob, 'photo.jpg');
-                                return formData;
-                            })())
+                            body: JSON.stringify({
+                                model: "deepseek-vl",
+                                messages: [
+                                    {
+                                        "role": "user",
+                                        "content": [
+                                            { "type": "text", "text": "Опиши эмоции человека на фото. Будь краток." },
+                                            { "type": "image_url", "image_url": { "url": photoResult.src } }
+                                        ]
+                                    }
+                                ]
+                            })
                         });
 
                         if (!response.ok) {
                             const errorText = await response.text();
                             throw new Error(`Ошибка API: ${response.status} ${errorText}`);
                         }
-
+                        
                         const data = await response.json();
+                        const resultText = data.choices[0].message.content;
+                        tg.showAlert(resultText);
 
-                        // Обрабатываем новый формат ответа от модели demographics-recognition
-                        if (data.output && data.output.demographics && data.output.demographics.length > 0) {
-                            const detectedEmotions = data.output.demographics[0].emotions;
-                            const emotionsText = detectedEmotions.map(e => e.charAt(0).toUpperCase() + e.slice(1)).join(', ');
-                            tg.showAlert(`Обнаруженные эмоции:\n\n${emotionsText}`);
-                        } else {
-                            tg.showAlert('Не удалось распознать эмоции на фото. Попробуйте другой снимок.');
-                        }
                     } catch (err) {
                         const message = err.message === 'API_KEY_MISSING' ? 'Пожалуйста, укажите ваш API-ключ в коде.' : `Произошла ошибка: ${err.message}`;
                         tg.showAlert(message);

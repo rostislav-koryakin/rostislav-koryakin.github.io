@@ -2,13 +2,74 @@
 <html>
 <head>
     <title>Вибрация</title>
+    <!-- Важный тег для корректного отображения на мобильных устройствах -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <!-- Подключаем скрипт Telegram Web App -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* Используем переменные темы Telegram для полной интеграции */
+        :root {
+            --tg-bg: var(--tg-theme-bg-color, #ffffff);
+            --tg-text: var(--tg-theme-text-color, #000000);
+            --tg-hint: var(--tg-theme-hint-color, #999999);
+            --tg-button: var(--tg-theme-button-color, #3390ec);
+            --tg-button-text: var(--tg-theme-button-text-color, #ffffff);
+            --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #f3f3f4);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                Helvetica, Arial, sans-serif;
+            background-color: var(--tg-bg);
+            color: var(--tg-text);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 24px;
+        }
+
+        #button-container button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background-color: var(--tg-button);
+            color: var(--tg-button-text);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s ease-out;
+        }
+
+        #button-container button:active {
+            opacity: 0.8;
+        }
+
+        .info-block {
+            margin-top: 24px;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: var(--tg-hint);
+            background-color: var(--tg-secondary-bg);
+            border-radius: 12px;
+            line-height: 1.4;
+        }
+    </style>
 </head>
 <body>
     <h1>Привет! Нажми на кнопку.</h1>
     <div id="button-container" style="display: flex; flex-direction: column; gap: 10px; padding: 10px;">
         <!-- Кнопки будут созданы здесь с помощью JS -->
+    </div>
+    <div id="info-container">
+        <!-- Информационный блок будет создан здесь -->
     </div>
 
     <script>
@@ -16,14 +77,13 @@
         document.addEventListener('DOMContentLoaded', function() {
             const tg = window.Telegram.WebApp;
             const container = document.getElementById('button-container');
+            const infoContainer = document.getElementById('info-container');
 
             // Проверяем, что мы находимся внутри Telegram Mini App
             if (tg && tg.HapticFeedback) {
                 const createButton = (text, onClick) => {
                     const btn = document.createElement('button');
                     btn.innerText = text;
-                    btn.style.width = '100%';
-                    btn.style.padding = '10px';
                     btn.addEventListener('click', onClick);
                     container.appendChild(btn);
                 };
@@ -54,12 +114,9 @@
 
             // Добавляем информационный блок с инструкциями
             const infoDiv = document.createElement('div');
-            infoDiv.style.marginTop = '20px';
-            infoDiv.style.padding = '10px';
-            infoDiv.style.fontSize = '14px';
-            infoDiv.style.color = 'var(--tg-theme-hint-color, #999999)'; // Используем цвет подсказок из темы Telegram
+            infoDiv.className = 'info-block';
             infoDiv.innerHTML = '<b>Не все кнопки вибрируют?</b><br>Это нормально для Android. Чтобы включить все типы вибрации, попробуйте:<br>1. Отключить режим энергосбережения.<br>2. Включить "Тактильный отклик" или "Виброотклик" в системных настройках звука.';
-            document.body.appendChild(infoDiv);
+            infoContainer.appendChild(infoDiv);
         });
     </script>
 </body>

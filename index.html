@@ -7,27 +7,42 @@
 </head>
 <body>
     <h1>Привет! Нажми на кнопку.</h1>
-    <button onclick="vibrate()">Нажми, чтобы вызвать вибрацию</button>
+    <button id="vibrate-btn">Нажми, чтобы вызвать вибрацию</button>
 
     <script>
-        // Функция для вызова вибрации
-        function vibrate() {
-            // Получаем объект WebApp
+        // Убедимся, что код выполняется после загрузки страницы
+        document.addEventListener('DOMContentLoaded', function() {
             const tg = window.Telegram.WebApp;
+            const vibrateButton = document.getElementById('vibrate-btn');
 
-            // Вызываем тактильный отклик (вибрацию)
-            // Вариант 1: легкое воздействие (impact)
-            tg.HapticFeedback.impactOccurred('medium'); // можно 'light', 'medium', 'heavy', 'rigid', 'soft'
+            // Проверяем, что мы находимся внутри Telegram Mini App
+            if (tg && tg.HapticFeedback) {
+                vibrateButton.addEventListener('click', function() {
+                    // Вызываем тактильный отклик (вибрацию)
+                    // Вариант 1: легкое воздействие (impact)
+                    tg.HapticFeedback.impactOccurred('medium'); // можно 'light', 'medium', 'heavy', 'rigid', 'soft'
 
-            // Вариант 2: уведомление (notification)
-            // tg.HapticFeedback.notificationOccurred('success'); // можно 'error', 'success', 'warning'
+ 
+                    // Вариант 2: уведомление (notification)
+                    // tg.HapticFeedback.notificationOccurred('success'); // можно 'error', 'success', 'warning'
 
-            // Вариант 3: изменение выбора
-            // tg.HapticFeedback.selectionChanged();
+ 
+                    // Вариант 3: изменение выбора
+                    // tg.HapticFeedback.selectionChanged();
 
-            // Необязательно: показываем, что действие выполнено
-            alert("Вибрация отправлена!");
-        }
+ 
+                    // Показываем нативное уведомление Telegram вместо alert()
+                    tg.showAlert("Вибрация отправлена!");
+                    // Добавим проверку для отладки
+                    tg.showAlert("Команда на вибрацию ('medium') отправлена. Объект HapticFeedback существует.");
+                });
+            } else {
+                // Если приложение открыто не в Telegram, сообщим об этом
+                vibrateButton.addEventListener('click', function() {
+                    alert('Эта функция работает только внутри Telegram Mini App.');
+                });
+            }
+        });
     </script>
 </body>
 </html>

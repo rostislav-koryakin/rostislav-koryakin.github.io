@@ -264,13 +264,13 @@
                                 model: "deepseek-vl-chat",
                                 messages: [
                                     {
-                                        "role": "user",
-                                        "content": [
-                                            { "type": "text", "text": "Опиши эмоции человека на фото. Будь краток." },
-                                            { "type": "image_url", "image_url": { "url": photoResult.src } }
-                                        ]
+                                        role: "user",
+                                        content: "Опиши эмоции человека на фото. Будь краток.\n<image_placeholder>"
                                     }
-                                ]
+                                ],
+                                extra_body: {
+                                    image: photoResult.src
+                                }
                             })
                         });
 

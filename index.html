@@ -139,6 +139,53 @@
         #delete-photo-btn {
             margin-top: 10px;
         }
+
+        /* --- Стили для кастомного промпта --- */
+        #prompt-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #prompt-box {
+            background: var(--tg-secondary-bg);
+            padding: 20px;
+            border-radius: 12px;
+            width: 85%;
+            max-width: 300px;
+            text-align: center;
+        }
+
+        #prompt-box h3 {
+            margin-top: 0;
+            font-size: 18px;
+            color: var(--tg-text);
+        }
+
+        #api-key-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--tg-hint);
+            border-radius: 8px;
+            background: var(--tg-bg);
+            color: var(--tg-text);
+            font-size: 16px;
+            box-sizing: border-box;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+
+        #prompt-buttons {
+            display: flex;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
@@ -164,6 +211,18 @@
         <button id="capture-btn"></button>
     </div>
 
+    <!-- Кастомный промпт для ввода API ключа -->
+    <div id="prompt-overlay">
+        <div id="prompt-box">
+            <h3>Введите API ключ</h3>
+            <input type="password" id="api-key-input" placeholder="Ключ от Deepseek...">
+            <div id="prompt-buttons">
+                <button id="prompt-cancel-btn">Отмена</button>
+                <button id="prompt-ok-btn">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Убедимся, что код выполняется после загрузки страницы
         document.addEventListener('DOMContentLoaded', function() {
@@ -179,6 +238,10 @@
             const photoHint = document.getElementById('photo-hint');
             const apiResultText = document.getElementById('api-result-text');
             const deletePhotoBtn = document.getElementById('delete-photo-btn');
+            const promptOverlay = document.getElementById('prompt-overlay');
+            const apiKeyInput = document.getElementById('api-key-input');
+            const promptOkBtn = document.getElementById('prompt-ok-btn');
+            const promptCancelBtn = document.getElementById('prompt-cancel-btn');
 
             let stream = null;
 
@@ -186,6 +249,10 @@
             if (tg && tg.HapticFeedback) {
                 const createButton = (text, onClick) => {
                     const btn = document.createElement('button');
+                    // Если это кнопка промпта, она не должна быть в основном контейнере
+                    if (text === 'Отмена' || text === 'OK') {
+                        btn.id = text === 'OK' ? 'prompt-ok-btn' : 'prompt-cancel-btn';
+                    }
                     btn.innerText = text;
                     btn.addEventListener('click', onClick);
                     container.appendChild(btn);
@@ -364,13 +431,26 @@
                         return; // Нечего отправлять
                     }
 
-                    // Используем нативный промпт Telegram для ввода ключа
-                    tg.showPrompt('Введите API ключ от Deepseek', (apiKey) => {
-                        // Если пользователь ввел ключ и нажал "ОК"
-                        if (apiKey && apiKey.trim().length > 0) {
-                            analyzePhoto(apiKey.trim());
-                        }
-                    });
+                    // Показываем наш кастомный промпт
+                    promptOverlay.style.display = 'flex';
+                    apiKeyInput.focus();
+                });
+
+                // Обработчики для кнопок кастомного промпта
+                promptCancelBtn.addEventListener('click', () => {
+                    promptOverlay.style.display = 'none';
+                    apiKeyInput.value = ''; // Очищаем поле
+                });
+
+                promptOkBtn.addEventListener('click', () => {
+                    const apiKey = apiKeyInput.value.trim();
+                    if (apiKey.length > 0) {
+                        promptOverlay.style.display = 'none';
+                        apiKeyInput.value = ''; // Очищаем поле
+                        analyzePhoto(apiKey);
+                    } else {
+                        tg.HapticFeedback.notificationOccurred('error');
+                    }
                 });
 
             } else {

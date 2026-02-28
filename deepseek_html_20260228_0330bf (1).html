@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Вибрация</title>
+    <!-- Подключаем скрипт Telegram Web App -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <h1>Привет! Нажми на кнопку.</h1>
+    <button onclick="vibrate()">Нажми, чтобы вызвать вибрацию</button>
+
+    <script>
+        // Функция для вызова вибрации
+        function vibrate() {
+            // Получаем объект WebApp
+            const tg = window.Telegram.WebApp;
+
+            // Вызываем тактильный отклик (вибрацию)
+            // Вариант 1: легкое воздействие (impact)
+            tg.HapticFeedback.impactOccurred('medium'); // можно 'light', 'medium', 'heavy', 'rigid', 'soft'
+
+            // Вариант 2: уведомление (notification)
+            // tg.HapticFeedback.notificationOccurred('success'); // можно 'error', 'success', 'warning'
+
+            // Вариант 3: изменение выбора
+            // tg.HapticFeedback.selectionChanged();
+
+            // Необязательно: показываем, что действие выполнено
+            alert("Вибрация отправлена!");
+        }
+    </script>
+</body>
+</html>

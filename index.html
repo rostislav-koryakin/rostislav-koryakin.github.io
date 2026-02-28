@@ -77,6 +77,21 @@
             align-items: center;
         }
 
+        #close-camera-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            background: rgba(0,0,0,0.4);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 101;
+        }
+
         #camera-preview {
             width: 100%;
             max-width: 100%;
@@ -94,12 +109,35 @@
             cursor: pointer;
         }
 
+        #result-container {
+            margin-top: 20px;
+            display: none; /* Скрыто по умолчанию */
+            text-align: center;
+        }
+
         #photo-result {
             max-width: 100%;
             border-radius: 12px;
-            margin-top: 20px;
-            display: none; /* Скрыто по умолчанию */
             cursor: pointer;
+        }
+
+        #photo-hint {
+            color: var(--tg-hint);
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        #api-result-text {
+            padding: 16px;
+            background-color: var(--tg-secondary-bg);
+            border-radius: 12px;
+            color: var(--tg-text);
+            text-align: left;
+            white-space: pre-wrap; /* Сохраняет переносы строк из ответа API */
+        }
+
+        #delete-photo-btn {
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -111,11 +149,17 @@
     <div id="info-container">
         <!-- Информационный блок будет создан здесь -->
     </div>
-    <!-- Контейнер для отображения сделанного снимка -->
-    <img id="photo-result" alt="Сделанный снимок" />
+    <!-- Контейнер для отображения результата (фото или текст) -->
+    <div id="result-container">
+        <img id="photo-result" alt="Сделанный снимок" />
+        <p id="photo-hint">Нажмите на фото для анализа эмоций</p>
+        <div id="api-result-text" style="display: none;"></div>
+        <button id="delete-photo-btn" style="display: none;">Удалить фото</button>
+    </div>
 
     <!-- Полноэкранный интерфейс для камеры -->
     <div id="camera-view">
+        <button id="close-camera-btn">×</button>
         <video id="camera-preview" autoplay playsinline></video>
         <button id="capture-btn"></button>
     </div>
@@ -129,7 +173,12 @@
             const cameraView = document.getElementById('camera-view');
             const video = document.getElementById('camera-preview');
             const captureBtn = document.getElementById('capture-btn');
+            const closeCameraBtn = document.getElementById('close-camera-btn');
+            const resultContainer = document.getElementById('result-container');
             const photoResult = document.getElementById('photo-result');
+            const photoHint = document.getElementById('photo-hint');
+            const apiResultText = document.getElementById('api-result-text');
+            const deletePhotoBtn = document.getElementById('delete-photo-btn');
 
             let stream = null;
 
@@ -214,46 +263,57 @@
                     }
                 });
 
+                // Функция для закрытия камеры
+                function closeCamera() {
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                        stream = null;
+                    }
+                    cameraView.style.display = 'none';
+                }
+
+                closeCameraBtn.addEventListener('click', closeCamera);
+
                 // Обработчик для кнопки "Сделать снимок"
                 captureBtn.addEventListener('click', () => {
                     const canvas = document.createElement('canvas');
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     const context = canvas.getContext('2d');
+                    // Отражаем изображение по горизонтали, чтобы селфи было правильным
+                    context.translate(canvas.width, 0);
+                    context.scale(-1, 1);
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
                     // Показываем результат
                     photoResult.src = canvas.toDataURL('image/jpeg');
+                    resultContainer.style.display = 'block';
                     photoResult.style.display = 'block';
+                    photoHint.style.display = 'block';
+                    apiResultText.style.display = 'none';
+                    deletePhotoBtn.style.display = 'block';
 
-                    // Останавливаем камеру и скрываем интерфейс
-                    if (stream) {
-                        stream.getTracks().forEach(track => track.stop());
-                    }
-                    cameraView.style.display = 'none';
+                    closeCamera();
                     tg.HapticFeedback.notificationOccurred('success');
+                });
+
+                // Кнопка удаления фото
+                deletePhotoBtn.addEventListener('click', () => {
+                    resultContainer.style.display = 'none';
+                    photoResult.src = '';
                 });
 
                 // --- ДОБАВЛЕННЫЙ КОД ДЛЯ АНАЛИЗА ЭМОЦИЙ ---
 
-                photoResult.addEventListener('click', async () => {
-                    if (!photoResult.src || photoResult.src.length < 100) {
-                        return; // Нечего отправлять
-                    }
-
+                // Функция для анализа фото, принимает ключ как аргумент
+                async function analyzePhoto(apiKey) {
                     // Показываем нативный индикатор загрузки Telegram
-                    tg.MainButton.show(); // <--- ВАЖНО: Показываем кнопку
+                    tg.MainButton.show();
                     tg.MainButton.setText('Анализ эмоции...');
                     tg.MainButton.showProgress();
                     tg.MainButton.disable();
 
                     try {
-                        // ВАЖНО: Замените 'YOUR_API_KEY' на ваш ключ от platform.deepseek.com
-                        const apiKey = 'sk-230edd0b5a5a416ea2e5b0962a1f3821';
-                        if (apiKey === 'YOUR_API_KEY') {
-                            throw new Error('API_KEY_MISSING');
-                        }
-
                         const response = await fetch('https://api.deepseek.com/chat/completions', {
                             method: 'POST',
                             headers: {
@@ -281,17 +341,36 @@
                         
                         const data = await response.json();
                         const resultText = data.choices[0].message.content;
-                        tg.showAlert(resultText);
+                        
+                        // 3. Заменяем фото на результат
+                        photoResult.style.display = 'none';
+                        photoHint.style.display = 'none';
+                        apiResultText.innerText = resultText;
+                        apiResultText.style.display = 'block';
 
                     } catch (err) {
-                        const message = err.message === 'API_KEY_MISSING' ? 'Пожалуйста, укажите ваш API-ключ в коде.' : `Произошла ошибка: ${err.message}`;
-                        tg.showAlert(message);
+                        tg.showAlert(`Произошла ошибка: ${err.message}`);
                     } finally {
                         // Скрываем индикатор загрузки
                         tg.MainButton.hideProgress();
                         tg.MainButton.hide(); // Скрываем кнопку после завершения
                         tg.MainButton.enable();
                     }
+                }
+
+                // При клике на фото, сначала запрашиваем API ключ
+                photoResult.addEventListener('click', () => {
+                    if (!photoResult.src || photoResult.src.length < 100) {
+                        return; // Нечего отправлять
+                    }
+
+                    // Используем нативный промпт Telegram для ввода ключа
+                    tg.showPrompt('Введите API ключ от Deepseek', (apiKey) => {
+                        // Если пользователь ввел ключ и нажал "ОК"
+                        if (apiKey && apiKey.trim().length > 0) {
+                            analyzePhoto(apiKey.trim());
+                        }
+                    });
                 });
 
             } else {

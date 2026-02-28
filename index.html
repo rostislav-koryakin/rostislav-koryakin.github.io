@@ -7,36 +7,49 @@
 </head>
 <body>
     <h1>Привет! Нажми на кнопку.</h1>
-    <button id="vibrate-btn">Нажми, чтобы вызвать вибрацию. 1</button>
+    <div id="button-container" style="display: flex; flex-direction: column; gap: 10px; padding: 10px;">
+        <!-- Кнопки будут созданы здесь с помощью JS -->
+    </div>
 
     <script>
         // Убедимся, что код выполняется после загрузки страницы
         document.addEventListener('DOMContentLoaded', function() {
             const tg = window.Telegram.WebApp;
-            const vibrateButton = document.getElementById('vibrate-btn');
+            const container = document.getElementById('button-container');
 
             // Проверяем, что мы находимся внутри Telegram Mini App
             if (tg && tg.HapticFeedback) {
-                vibrateButton.addEventListener('click', function() {
-                    // Вызываем тактильный отклик (вибрацию)
-                    // Вариант 1: легкое воздействие (impact)
-                    tg.HapticFeedback.impactOccurred('medium'); // можно 'light', 'medium', 'heavy', 'rigid', 'soft'
- 
-                    // Вариант 2: уведомление (notification)
-                    // tg.HapticFeedback.notificationOccurred('success'); // можно 'error', 'success', 'warning'
- 
-                    // Вариант 3: изменение выбора
-                    // tg.HapticFeedback.selectionChanged();
- 
-                    // Показываем нативное уведомление Telegram вместо alert()
-                    // Добавим проверку для отладки
-                    tg.showAlert("Команда на вибрацию ('medium') отправлена. Объект HapticFeedback существует.");
+                const createButton = (text, onClick) => {
+                    const btn = document.createElement('button');
+                    btn.innerText = text;
+                    btn.style.width = '100%';
+                    btn.style.padding = '10px';
+                    btn.addEventListener('click', onClick);
+                    container.appendChild(btn);
+                };
+
+                // Кнопки для impactOccurred
+                ['light', 'medium', 'heavy', 'rigid', 'soft'].forEach(type => {
+                    createButton(`Impact: ${type}`, () => {
+                        tg.HapticFeedback.impactOccurred(type);
+                    });
                 });
+
+                // Кнопки для notificationOccurred
+                ['success', 'warning', 'error'].forEach(type => {
+                    createButton(`Notification: ${type}`, () => {
+                        tg.HapticFeedback.notificationOccurred(type);
+                    });
+                });
+
+                // Кнопка для selectionChanged
+                createButton('Selection Changed', () => {
+                    tg.HapticFeedback.selectionChanged();
+                });
+
             } else {
                 // Если приложение открыто не в Telegram, сообщим об этом
-                vibrateButton.addEventListener('click', function() {
-                    alert('Эта функция работает только внутри Telegram Mini App.');
-                });
+                container.innerHTML = '<p>Эта функция работает только внутри Telegram Mini App.</p>';
             }
         });
     </script>

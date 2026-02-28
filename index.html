@@ -120,6 +120,9 @@
         <button id="capture-btn"></button>
     </div>
 
+    <!-- Подключаем FaceAPI.js. `defer` важен, чтобы не блокировать загрузку страницы -->
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
     <script>
         // Убедимся, что код выполняется после загрузки страницы
         document.addEventListener('DOMContentLoaded', function() {
@@ -132,6 +135,29 @@
             const photoResult = document.getElementById('photo-result');
 
             let stream = null;
+            let modelsLoaded = false;
+
+            // --- НОВАЯ ФУНКЦИЯ ДЛЯ ЗАГРУЗКИ МОДЕЛЕЙ ---
+            async function loadModels() {
+                // Путь к моделям на CDN
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+                try {
+                    tg.MainButton.show();
+                    tg.MainButton.setText('Загрузка AI моделей...');
+                    tg.MainButton.showProgress();
+
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                    await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+                    
+                    modelsLoaded = true;
+                } catch (e) {
+                    tg.showAlert('Не удалось загрузить AI модели. Попробуйте перезапустить приложение.');
+                } finally {
+                    tg.MainButton.hide();
+                    tg.MainButton.hideProgress();
+                }
+            }
 
             // Проверяем, что мы находимся внутри Telegram Mini App
             if (tg && tg.HapticFeedback) {
@@ -141,6 +167,9 @@
                     btn.addEventListener('click', onClick);
                     container.appendChild(btn);
                 };
+
+                // Загружаем модели при старте
+                loadModels();
 
                 // Кнопки для notificationOccurred
                 createButton('✅ Вибрация: Успех', () => {
@@ -240,51 +269,32 @@
                     if (!photoResult.src || photoResult.src.length < 100) {
                         return; // Нечего отправлять
                     }
+                    if (!modelsLoaded) {
+                        tg.showAlert('Модели AI еще не загружены. Пожалуйста, подождите.');
+                        return;
+                    }
 
                     // Показываем нативный индикатор загрузки Telegram
-                    tg.MainButton.show(); // <--- ВАЖНО: Показываем кнопку
+                    tg.MainButton.show();
                     tg.MainButton.setText('Анализ эмоции...');
                     tg.MainButton.showProgress();
                     tg.MainButton.disable();
 
                     try {
-                        // ВАЖНО: Замените 'YOUR_API_KEY' на ваш ключ от DeepAI.org
-                        const apiKey = 'ef659e94-a59f-421f-9640-73797353c367';
-                        if (apiKey === 'YOUR_API_KEY') {
-                            throw new Error('API_KEY_MISSING');
-                        }
+                        const detections = await faceapi.detectSingleFace(photoResult, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions();
 
-                        const response = await fetch('https://api.deepai.org/api/demographics-recognition', {
-                            method: 'POST',
-                            headers: {
-                                'api-key': apiKey
-                            },
-                            body: (await (async () => {
-                                const formData = new FormData();
-                                const blob = await (await fetch(photoResult.src)).blob();
-                                formData.append('image', blob, 'photo.jpg');
-                                return formData;
-                            })())
-                        });
-
-                        if (!response.ok) {
-                            const errorText = await response.text();
-                            throw new Error(`Ошибка API: ${response.status} ${errorText}`);
-                        }
-
-                        const data = await response.json();
-
-                        // Обрабатываем новый формат ответа от модели demographics-recognition
-                        if (data.output && data.output.demographics && data.output.demographics.length > 0) {
-                            const detectedEmotions = data.output.demographics[0].emotions;
-                            const emotionsText = detectedEmotions.map(e => e.charAt(0).toUpperCase() + e.slice(1)).join(', ');
-                            tg.showAlert(`Обнаруженные эмоции:\n\n${emotionsText}`);
+                        if (detections) {
+                            const expressions = detections.expressions;
+                            // Находим эмоцию с наибольшей вероятностью
+                            const maxEmotion = Object.keys(expressions).reduce((a, b) => expressions[a] > expressions[b] ? a : b);
+                            const emotionTranslations = { happy: 'Счастье', sad: 'Грусть', angry: 'Злость', neutral: 'Нейтральность', surprised: 'Удивление', fearful: 'Страх', disgusted: 'Отвращение' };
+                            
+                            tg.showAlert(`Я думаю, ваша основная эмоция — ${emotionTranslations[maxEmotion] || maxEmotion}.`);
                         } else {
                             tg.showAlert('Не удалось распознать эмоции на фото. Попробуйте другой снимок.');
                         }
                     } catch (err) {
-                        const message = err.message === 'API_KEY_MISSING' ? 'Пожалуйста, укажите ваш API-ключ в коде.' : `Произошла ошибка: ${err.message}`;
-                        tg.showAlert(message);
+                        tg.showAlert(`Произошла ошибка при анализе: ${err.message}`);
                     } finally {
                         // Скрываем индикатор загрузки
                         tg.MainButton.hideProgress();
@@ -297,8 +307,6 @@
                 // Если приложение открыто не в Telegram, сообщим об этом
                 container.innerHTML = '<p>Эта функция работает только внутри Telegram Mini App.</p>';
             }
-
-            // Добавляем информационный блок с инструкциями
         });
     </script>
 </body>

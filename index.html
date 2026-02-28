@@ -115,7 +115,24 @@
                         navigator.geolocation.getCurrentPosition(
                             (position) => {
                                 const { latitude, longitude } = position.coords;
-                                tg.showAlert(`Ваши координаты:\n\nШирота: ${latitude.toFixed(4)}\nДолгота: ${longitude.toFixed(4)}`);
+                                // Сначала показываем попап с выбором действия
+                                tg.showPopup({
+                                    title: 'Геолокация определена',
+                                    message: 'Что вы хотите сделать с полученными координатами?',
+                                    buttons: [
+                                        {id: 'show_coords', type: 'default', text: 'Показать координаты'},
+                                        {id: 'open_maps', type: 'default', text: 'Открыть в Картах'},
+                                        {type: 'cancel'}, // Стандартная кнопка "Закрыть"
+                                    ]
+                                }, (buttonId) => {
+                                    // Обрабатываем выбор пользователя
+                                    if (buttonId === 'show_coords') {
+                                        tg.showAlert(`Ваши координаты:\n\nШирота: ${latitude.toFixed(4)}\nДолгота: ${longitude.toFixed(4)}`);
+                                    } else if (buttonId === 'open_maps') {
+                                        // Открываем ссылку на Google Карты с полученными координатами
+                                        tg.openLink(`https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`);
+                                    }
+                                });
                             },
                             (error) => {
                                 let errorMessage = 'Не удалось определить геолокацию.';

@@ -51,6 +51,15 @@
                 // Если приложение открыто не в Telegram, сообщим об этом
                 container.innerHTML = '<p>Эта функция работает только внутри Telegram Mini App.</p>';
             }
+
+            // Добавляем информационный блок с инструкциями
+            const infoDiv = document.createElement('div');
+            infoDiv.style.marginTop = '20px';
+            infoDiv.style.padding = '10px';
+            infoDiv.style.fontSize = '14px';
+            infoDiv.style.color = 'var(--tg-theme-hint-color, #999999)'; // Используем цвет подсказок из темы Telegram
+            infoDiv.innerHTML = '<b>Не все кнопки вибрируют?</b><br>Это нормально для Android. Чтобы включить все типы вибрации, попробуйте:<br>1. Отключить режим энергосбережения.<br>2. Включить "Тактильный отклик" или "Виброотклик" в системных настройках звука.';
+            document.body.appendChild(infoDiv);
         });
     </script>
 </body>
